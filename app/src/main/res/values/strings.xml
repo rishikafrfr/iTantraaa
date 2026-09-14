@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">iTantra</string>
+    <string name="talk">Talk (STT)</string>
+    <string name="listen">Listen (TTS)</string>
+    <string name="connect">Connect</string>
+    <string name="packs">Packs</string>
+    <string name="start_listening">Start listening</string>
+    <string name="listening">LISTENING — tap to stop</string>
+    <string name="speak">Speak</string>
+    <string name="alert">ALERT</string>
+    <string name="language">Language</string>
+    <string name="messages">Messages:</string>
+    <string name="recognised">Recognised sentences:</string>
+</resources>

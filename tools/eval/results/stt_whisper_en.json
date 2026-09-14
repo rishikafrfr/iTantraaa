@@ -1,0 +1,32 @@
+{
+  "engine": "whisper",
+  "model_dir": "..\\..\\models\\cache\\whisper-tiny-int8",
+  "lang": "en",
+  "threads": 4,
+  "machine": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel",
+  "python": "3.14.6",
+  "sherpa_onnx": "1.13.8",
+  "model_size_mb": 254.9,
+  "load_s": 0.28,
+  "rss_delta_after_load_mb": 280.3,
+  "rss_process_mb": 322.6,
+  "total_audio_s": 23.34,
+  "total_decode_s": 0.479,
+  "mean_rtf": 0.0205,
+  "per_wav": [
+    {
+      "wav": "../../models/cache/whisper-tiny-int8/test_wavs/0.wav",
+      "audio_s": 6.625,
+      "decode_s": 0.1277,
+      "rtf": 0.0193,
+      "text": "After early nightfall, the yellow lamps would light up here and there the squalid quarter of the brothels."
+    },
+    {
+      "wav": "../../models/cache/whisper-tiny-int8/test_wavs/1.wav",
+      "audio_s": 16.715,
+      "decode_s": 0.3513,
+      "rtf": 0.021,
+      "text": "God, as a direct consequence of the sin which man thus punished, had given her a lovely child, whose place was on that same dishonored bosom to connect her parent forever with the race and descent of mortals, and to be finally a blessed soul in heaven."
+    }
+  ]
+}

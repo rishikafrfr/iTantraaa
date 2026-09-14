@@ -1,0 +1,228 @@
+{
+  "packs": [
+    {
+      "id": "multi-stt-omnilingual-300m-int8",
+      "lang": "multi",
+      "kind": "stt",
+      "engine": "sherpa-offline",
+      "modelType": "omnilingual_asr_ctc",
+      "license": "Apache-2.0 (Meta Omnilingual ASR; sherpa-onnx conversion by csukuangfj)",
+      "source": "https://huggingface.co/csukuangfj/sherpa-onnx-omnilingual-asr-1600-languages-300M-ctc-int8-2025-11-12",
+      "sampleRate": 16000,
+      "files": {
+        "omnilingual-300m-int8/model.int8.onnx": "model.int8.onnx",
+        "omnilingual-300m-int8/tokens.txt": "tokens.txt"
+      },
+      "filesOut": {
+        "model": "model.int8.onnx",
+        "tokens": "tokens.txt"
+      }
+    },
+    {
+      "id": "en-stt-whisper-tiny-int8",
+      "lang": "en",
+      "kind": "stt",
+      "engine": "sherpa-offline",
+      "modelType": "whisper",
+      "license": "Apache-2.0 (OpenAI Whisper; sherpa-onnx conversion by csukuangfj)",
+      "source": "https://huggingface.co/csukuangfj/sherpa-onnx-whisper-tiny",
+      "sampleRate": 16000,
+      "files": {
+        "whisper-tiny-int8/tiny-encoder.int8.onnx": "encoder.int8.onnx",
+        "whisper-tiny-int8/tiny-decoder.int8.onnx": "decoder.int8.onnx",
+        "whisper-tiny-int8/tiny-tokens.txt": "tokens.txt"
+      },
+      "filesOut": {
+        "encoder": "encoder.int8.onnx",
+        "decoder": "decoder.int8.onnx",
+        "tokens": "tokens.txt"
+      }
+    },
+    {
+      "id": "en-tts-piper-lessac-medium",
+      "lang": "en",
+      "kind": "tts",
+      "engine": "sherpa-offline",
+      "modelType": "vits",
+      "license": "MIT (piper voice training); see MODEL_CARD in repo",
+      "source": "https://huggingface.co/csukuangfj/vits-piper-en_US-lessac-medium",
+      "sampleRate": 22050,
+      "files": {
+        "piper-en_US-lessac-medium/en_US-lessac-medium.onnx": "model.onnx",
+        "piper-en_US-lessac-medium/tokens.txt": "tokens.txt",
+        "piper-en_US-lessac-medium/en_US-lessac-medium.onnx.json": "model.onnx.json"
+      },
+      "dirs": {
+        "piper-en_US-lessac-medium/espeak-ng-data": "espeak-ng-data"
+      },
+      "filesOut": {
+        "model": "model.onnx",
+        "tokens": "tokens.txt",
+        "modelConfig": "model.onnx.json",
+        "dataDir": "espeak-ng-data"
+      }
+    },
+    {
+      "id": "hi-tts-mms",
+      "lang": "hi",
+      "kind": "tts",
+      "engine": "sherpa-offline",
+      "modelType": "vits",
+      "license": "CC-BY-NC-4.0 (Meta MMS; ONNX conversion by willwade) — NON-COMMERCIAL, team decision required",
+      "source": "https://huggingface.co/willwade/mms-tts-multilingual-models-onnx",
+      "sampleRate": 16000,
+      "files": {
+        "vits-mms-hin/model.onnx": "model.onnx",
+        "vits-mms-hin/tokens.txt": "tokens.txt"
+      },
+      "filesOut": {
+        "model": "model.onnx",
+        "tokens": "tokens.txt"
+      }
+    },
+    {
+      "id": "gu-tts-mms",
+      "lang": "gu",
+      "kind": "tts",
+      "engine": "sherpa-offline",
+      "modelType": "vits",
+      "license": "CC-BY-NC-4.0 (Meta MMS; ONNX conversion by willwade) — NON-COMMERCIAL, team decision required",
+      "source": "https://huggingface.co/willwade/mms-tts-multilingual-models-onnx",
+      "sampleRate": 16000,
+      "files": {
+        "vits-mms-guj/model.onnx": "model.onnx",
+        "vits-mms-guj/tokens.txt": "tokens.txt"
+      },
+      "filesOut": {
+        "model": "model.onnx",
+        "tokens": "tokens.txt"
+      }
+    },
+    {
+      "id": "mr-tts-mms",
+      "lang": "mr",
+      "kind": "tts",
+      "engine": "sherpa-offline",
+      "modelType": "vits",
+      "license": "CC-BY-NC-4.0 (Meta MMS; ONNX conversion by willwade) — NON-COMMERCIAL, team decision required",
+      "source": "https://huggingface.co/willwade/mms-tts-multilingual-models-onnx",
+      "sampleRate": 16000,
+      "files": {
+        "vits-mms-mar/model.onnx": "model.onnx",
+        "vits-mms-mar/tokens.txt": "tokens.txt"
+      },
+      "filesOut": {
+        "model": "model.onnx",
+        "tokens": "tokens.txt"
+      }
+    },
+    {
+      "id": "bn-tts-mms",
+      "lang": "bn",
+      "kind": "tts",
+      "engine": "sherpa-offline",
+      "modelType": "vits",
+      "license": "CC-BY-NC-4.0 (Meta MMS; ONNX conversion by willwade) — NON-COMMERCIAL, team decision required",
+      "source": "https://huggingface.co/willwade/mms-tts-multilingual-models-onnx",
+      "sampleRate": 16000,
+      "files": {
+        "vits-mms-ben/model.onnx": "model.onnx",
+        "vits-mms-ben/tokens.txt": "tokens.txt"
+      },
+      "filesOut": {
+        "model": "model.onnx",
+        "tokens": "tokens.txt"
+      }
+    },
+    {
+      "id": "ta-tts-mms",
+      "lang": "ta",
+      "kind": "tts",
+      "engine": "sherpa-offline",
+      "modelType": "vits",
+      "license": "CC-BY-NC-4.0 (Meta MMS; ONNX conversion by willwade) — NON-COMMERCIAL, team decision required",
+      "source": "https://huggingface.co/willwade/mms-tts-multilingual-models-onnx",
+      "sampleRate": 16000,
+      "files": {
+        "vits-mms-tam/model.onnx": "model.onnx",
+        "vits-mms-tam/tokens.txt": "tokens.txt"
+      },
+      "filesOut": {
+        "model": "model.onnx",
+        "tokens": "tokens.txt"
+      }
+    },
+    {
+      "id": "te-tts-mms",
+      "lang": "te",
+      "kind": "tts",
+      "engine": "sherpa-offline",
+      "modelType": "vits",
+      "license": "CC-BY-NC-4.0 (Meta MMS; ONNX conversion by willwade) — NON-COMMERCIAL, team decision required",
+      "source": "https://huggingface.co/willwade/mms-tts-multilingual-models-onnx",
+      "sampleRate": 16000,
+      "files": {
+        "vits-mms-tel/model.onnx": "model.onnx",
+        "vits-mms-tel/tokens.txt": "tokens.txt"
+      },
+      "filesOut": {
+        "model": "model.onnx",
+        "tokens": "tokens.txt"
+      }
+    },
+    {
+      "id": "kn-tts-mms",
+      "lang": "kn",
+      "kind": "tts",
+      "engine": "sherpa-offline",
+      "modelType": "vits",
+      "license": "CC-BY-NC-4.0 (Meta MMS; ONNX conversion by willwade) — NON-COMMERCIAL, team decision required",
+      "source": "https://huggingface.co/willwade/mms-tts-multilingual-models-onnx",
+      "sampleRate": 16000,
+      "files": {
+        "vits-mms-kan/model.onnx": "model.onnx",
+        "vits-mms-kan/tokens.txt": "tokens.txt"
+      },
+      "filesOut": {
+        "model": "model.onnx",
+        "tokens": "tokens.txt"
+      }
+    },
+    {
+      "id": "ml-tts-mms",
+      "lang": "ml",
+      "kind": "tts",
+      "engine": "sherpa-offline",
+      "modelType": "vits",
+      "license": "CC-BY-NC-4.0 (Meta MMS; ONNX conversion by willwade) — NON-COMMERCIAL, team decision required",
+      "source": "https://huggingface.co/willwade/mms-tts-multilingual-models-onnx",
+      "sampleRate": 16000,
+      "files": {
+        "vits-mms-mal/model.onnx": "model.onnx",
+        "vits-mms-mal/tokens.txt": "tokens.txt"
+      },
+      "filesOut": {
+        "model": "model.onnx",
+        "tokens": "tokens.txt"
+      }
+    },
+    {
+      "id": "or-tts-mms",
+      "lang": "or",
+      "kind": "tts",
+      "engine": "sherpa-offline",
+      "modelType": "vits",
+      "license": "CC-BY-NC-4.0 (Meta MMS; ONNX conversion by willwade) — NON-COMMERCIAL, team decision required",
+      "source": "https://huggingface.co/willwade/mms-tts-multilingual-models-onnx",
+      "sampleRate": 16000,
+      "files": {
+        "vits-mms-ory/model.onnx": "model.onnx",
+        "vits-mms-ory/tokens.txt": "tokens.txt"
+      },
+      "filesOut": {
+        "model": "model.onnx",
+        "tokens": "tokens.txt"
+      }
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "style": "piper",
+  "model_dir": "..\\..\\models\\cache\\piper-en_US-lessac-medium",
+  "threads": 2,
+  "machine": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel",
+  "sherpa_onnx": "1.13.8",
+  "model_size_mb": 63.2,
+  "sample_rate": 22050,
+  "text": "Attention please. This is an emergency alert message. Move to the nearest exit immediately.",
+  "load_s": 0.767,
+  "rss_delta_after_load_mb": 103.6,
+  "rss_process_mb": 192.3,
+  "audio_s": 5.538,
+  "synthesis_s": 0.253,
+  "rtf": 0.0457,
+  "first_chunk_s": 0.1014
+}

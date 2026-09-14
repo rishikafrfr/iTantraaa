@@ -1,0 +1,14 @@
+[
+  {
+    "wav": "results/audio/tts_piper_en.wav",
+    "ref": "attention please this is an emergency alert message move to the nearest exit immediately",
+    "hyp": "attention please this is an emergency alert message move to the nearest egit immediately",
+    "roundtrip_cer": 0.0114
+  },
+  {
+    "wav": "results/audio/tts_mms_hi.wav",
+    "ref": "सुनो यह एक आपातकालीन चेतावनी संदेश है तुरंत निकटतम निकास की ओर जाएँ",
+    "hyp": "सुनो ये एक आपात कालीन चेताबनी संदेश है तुरत निकटतम निकास की और जाएँ",
+    "roundtrip_cer": 0.0746
+  }
+]

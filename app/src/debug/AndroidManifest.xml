@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The headless verification hook is debug-only and must stay that way. It used
+  to live in the main manifest as an exported receiver, so release APKs shipped
+  an entry point any installed app could broadcast to; the FLAG_DEBUGGABLE check
+  inside the receiver was the only thing standing in the way. Declaring it here
+  means it simply does not exist in a release build.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <receiver
+            android:name="isro.itantra.DebugHookReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="isro.itantra.DEBUG_STT_FILE" />
+                <action android:name="isro.itantra.DEBUG_TTS" />
+                <action android:name="isro.itantra.DEBUG_HOST" />
+                <action android:name="isro.itantra.DEBUG_JOIN" />
+                <action android:name="isro.itantra.DEBUG_SEND" />
+                <action android:name="isro.itantra.DEBUG_STATE" />
+                <action android:name="isro.itantra.DEBUG_EXPORT" />
+                <action android:name="isro.itantra.DEBUG_DOWNLOAD" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

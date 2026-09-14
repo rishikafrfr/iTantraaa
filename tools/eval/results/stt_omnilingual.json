@@ -1,0 +1,46 @@
+{
+  "engine": "omnilingual",
+  "model_dir": "..\\..\\models\\cache\\omnilingual-300m-int8",
+  "lang": "en",
+  "threads": 4,
+  "machine": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel",
+  "python": "3.14.6",
+  "sherpa_onnx": "1.13.8",
+  "model_size_mb": 365.4,
+  "load_s": 0.605,
+  "rss_delta_after_load_mb": 554.2,
+  "rss_process_mb": 596.4,
+  "total_audio_s": 16.89,
+  "total_decode_s": 1.015,
+  "mean_rtf": 0.0601,
+  "per_wav": [
+    {
+      "wav": "../../models/cache/omnilingual-300m-int8/test_wavs\\de.wav",
+      "audio_s": 2.752,
+      "decode_s": 0.1649,
+      "rtf": 0.0599,
+      "text": "alles hat ein ende nur die wurst hat zwei"
+    },
+    {
+      "wav": "../../models/cache/omnilingual-300m-int8/test_wavs\\en.wav",
+      "audio_s": 3.845,
+      "decode_s": 0.2318,
+      "rtf": 0.0603,
+      "text": "ask not what your country can do for you ask what you can do for your country"
+    },
+    {
+      "wav": "../../models/cache/omnilingual-300m-int8/test_wavs\\es.wav",
+      "audio_s": 5.329,
+      "decode_s": 0.3193,
+      "rtf": 0.0599,
+      "text": "no preguntes que puede hacer tu país por ti pregunta que puedes hacer te un puer tu país"
+    },
+    {
+      "wav": "../../models/cache/omnilingual-300m-int8/test_wavs\\fr.wav",
+      "audio_s": 4.969,
+      "decode_s": 0.2992,
+      "rtf": 0.0602,
+      "text": "ne vous demandez pas ce que votre pays peut faire pour vous demandez-vous plutôt ce que vous pouvez faire pour lui"
+    }
+  ]
+}

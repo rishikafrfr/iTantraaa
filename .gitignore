@@ -1,0 +1,27 @@
+# model artefacts & caches
+models/cache/
+dist/
+tools/.venv/
+__pycache__/
+*.pyc
+
+# android (phase 1+)
+.gradle/
+.kotlin/
+build/
+local.properties
+
+# vendored toolchain — a full Gradle distribution (278 MB); use ./gradlew instead
+tools/gradle-8.14.3/
+tools/gradle-8.14.3-bin.zip
+
+# headless run output
+# NB: app/src/main/assets/vad/silero_vad.onnx is deliberately tracked (632 KB) —
+# it ships inside the APK and the build fails without it
+tools/android/results/
+tools/android/results_logcat.txt
+
+# IDE
+.idea/
+*.iml
+.DS_Store

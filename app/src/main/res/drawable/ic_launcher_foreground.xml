@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  A mast radiating in both directions, standing on the carrier bar. Same motif
+  as the bar under the app's header: the link is the product.
+  Artwork stays inside the 66dp adaptive-icon safe zone (27..81 of 108).
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- mast -->
+    <path
+        android:fillColor="#E8E2D4"
+        android:pathData="M52,33h4v39h-4z" />
+
+    <!-- carrier bar -->
+    <path
+        android:fillColor="#F2A22C"
+        android:pathData="M31,74h46v5h-46z" />
+
+    <!-- inner radiation -->
+    <path
+        android:pathData="M61,45 A11,11 0 0 1 61,63"
+        android:strokeColor="#F2A22C"
+        android:strokeWidth="4"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M47,45 A11,11 0 0 0 47,63"
+        android:strokeColor="#F2A22C"
+        android:strokeWidth="4"
+        android:strokeLineCap="round" />
+
+    <!-- outer radiation -->
+    <path
+        android:pathData="M68,38 A19,19 0 0 1 68,70"
+        android:strokeColor="#F2A22C"
+        android:strokeWidth="4"
+        android:strokeAlpha="0.55"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M40,38 A19,19 0 0 0 40,70"
+        android:strokeColor="#F2A22C"
+        android:strokeWidth="4"
+        android:strokeAlpha="0.55"
+        android:strokeLineCap="round" />
+</vector>

@@ -1,0 +1,17 @@
+{
+  "style": "mms",
+  "model_dir": "..\\..\\models\\cache\\vits-mms-hin",
+  "threads": 2,
+  "machine": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel",
+  "sherpa_onnx": "1.13.8",
+  "model_size_mb": 114.0,
+  "sample_rate": 16000,
+  "text": "सुनो, यह एक आपातकालीन चेतावनी संदेश है। तुरंत निकटतम निकास की ओर जाएँ।",
+  "load_s": 0.411,
+  "rss_delta_after_load_mb": 159.5,
+  "rss_process_mb": 291.2,
+  "audio_s": 5.09,
+  "synthesis_s": 1.09,
+  "rtf": 0.2141,
+  "first_chunk_s": 1.0896
+}

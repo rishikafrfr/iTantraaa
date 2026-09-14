@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  UI copy added with the panel redesign. NOT YET TRANSLATED into the ten
+  supported languages - Android falls back to English per string, so every
+  screen stays usable, but these should be reviewed by native speakers before
+  submission. They live in their own file with the lint check suppressed so
+  that MissingTranslation keeps working for res/values/strings.xml, which IS
+  fully translated.
+-->
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="link_none">No link</string>
+    <string name="link_hosting">Waiting for peer</string>
+    <string name="link_connecting">Connecting</string>
+    <string name="link_up">Link up</string>
+    <string name="link_error">Link failed</string>
+    <string name="host_wifi">Host</string>
+    <string name="join_wifi">Join</string>
+    <string name="disconnect">Disconnect</string>
+    <string name="peer_ip">Peer IP</string>
+    <string name="paired_device">Paired device</string>
+    <string name="quick_send">Type a message</string>
+    <string name="send">Send</string>
+    <string name="text_to_speak">Text to speak</string>
+    <string name="export_csv">Export benchmarks</string>
+    <string name="install">Install</string>
+    <string name="delete">Delete</string>
+    <string name="installed_voices">Installed voices</string>
+    <string name="available_voices">Available voices</string>
+    <string name="empty_transcripts">Nothing heard yet. Tap start and speak a full sentence.</string>
+    <string name="empty_messages">No messages yet. Host on one phone, join from the other.</string>
+    <string name="empty_packs">No voices installed. Install one below to hear messages.</string>
+    <string name="no_stt">Speech recognition pack missing. Install it under Packs.</string>
+    <string name="no_mic">Microphone access is off. Turn it on in Settings to send speech.</string>
+    <string name="no_bt">Bluetooth access is off. Turn it on in Settings to link over Bluetooth.</string>
+    <string name="no_tts">No voice installed for this language. Install one under Packs.</string>
+    <string name="download_hint">One-time download. After this the app runs fully offline.</string>
+    <string name="ack">Delivered</string>
+    <string name="sending">Sending</string>
+    <string name="not_sent">Not sent</string>
+    <string name="unsupported_script">Heard speech in a script with no voice pack (likely Urdu). Not sent — try speaking again.</string>
+</resources>

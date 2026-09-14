@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">iTantra</string>
+    <string name="talk">କହିବା (STT)</string>
+    <string name="listen">ଶୁଣ (TTS)</string>
+    <string name="connect">ସଂଯୋଗ</string>
+    <string name="packs">ପ୍ୟାକ</string>
+    <string name="start_listening">ଶୁଣିବା ଆରମ୍ଭ କର</string>
+    <string name="listening">ଶୁଣୁଛି — ବନ୍ଦ କରିବାକୁ ଦବାଅ</string>
+    <string name="speak">କହ</string>
+    <string name="alert">ଚେତାବନୀ</string>
+    <string name="language">ଭାଷା</string>
+    <string name="messages">ବାର୍ତ୍ତା:</string>
+    <string name="recognised">ଚିହ୍ନଟ ହୋଇଥିବା ବାକ୍ୟ:</string>
+</resources>
