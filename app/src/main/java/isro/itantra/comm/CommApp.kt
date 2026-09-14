@@ -48,8 +48,20 @@ class CommApp private constructor(private val context: Context) {
     )
 
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    val link = TcpLink(onFrame = ::onFrame, onState = ::onLinkState)
-    private val bt: BtLink = BtLink(onFrame = ::onFrame, onState = ::onLinkState)
+    private enum class TransportType {
+        TCP,
+        BLUETOOTH
+    }
+
+    val link = TcpLink(
+        onFrame = ::onFrame,
+        onState = { s, d -> onLinkState(s, d, TransportType.TCP) }
+    )
+
+    private val bt: BtLink = BtLink(
+        onFrame = ::onFrame,
+        onState = { s, d -> onLinkState(s, d, TransportType.BLUETOOTH) }
+    )
 
     val state = MutableStateFlow(LinkState.DISCONNECTED to (null as String?))
     val peerLangs = MutableStateFlow<List<String>>(emptyList())
@@ -102,7 +114,7 @@ class CommApp private constructor(private val context: Context) {
                         } else {
                             p.attempts++
                             p.sentAt = now
-                            link.send(p.frame)
+                            sendViaActive(p.frame)
                         }
                     }
                 }
@@ -125,19 +137,33 @@ class CommApp private constructor(private val context: Context) {
     fun join2(host: String, port: Int) = joinAuto(host, port)
     fun disconnect() {
         lastJoin = null
+        activeTransport = null
         link.close()
+        bt.close()
     }
 
     @Volatile private var lastJoin: Pair<String, Int>? = null
+    @Volatile private var activeTransport: TransportType? = null // whichever link last went CONNECTED
 
-    private fun onLinkState(s: LinkState, detail: String?) {
+    private fun onLinkState(
+        s: LinkState,
+        detail: String?,
+        from: TransportType
+    ) {
         state.value = s to detail
-        if (s == LinkState.CONNECTED) {
-            // the peer's msgId counter restarts at 1 on reconnect — stale ids would
-            // make every message after a reconnect look like a duplicate and be dropped
-            seenIds.clear()
-            sendHello()
-            lastJoin = null // stop rejoin attempts once connected
+        when (s) {
+            LinkState.CONNECTED -> {
+                activeTransport = from
+                // the peer's msgId counter restarts at 1 on reconnect — stale ids would
+                // make every message after a reconnect look like a duplicate and be dropped
+                seenIds.clear()
+                sendHello()
+                lastJoin = null // stop rejoin attempts once connected
+            }
+            LinkState.DISCONNECTED, LinkState.ERROR -> {
+                if (activeTransport == from) activeTransport = null
+            }
+            else -> {}
         }
         Log.i(TAG, "link: $s $detail")
     }
@@ -165,6 +191,15 @@ class CommApp private constructor(private val context: Context) {
 
     // ---- send path ----
 
+    /** Route every protocol frame over the transport that is actually connected. */
+    private fun sendViaActive(frame: Wire.Frame): Boolean {
+        return when (activeTransport) {
+            TransportType.BLUETOOTH -> bt.send(frame)
+            TransportType.TCP -> link.send(frame)
+            null -> false
+        }
+    }
+
     fun sendText(text: String, lang: String, alert: Boolean, tSpeechEndUs: Long? = null) {
         var fl = Wire.FLAG_FINAL.toInt() or Wire.FLAG_ACK_REQ.toInt()
         if (alert) fl = fl or Wire.FLAG_ALERT.toInt()
@@ -181,7 +216,7 @@ class CommApp private constructor(private val context: Context) {
         history.value = history.value + Message(frame.msgId, text, lang, alert, fromMe = true)
         // socket writes must never run on the caller's (often main) thread
         scope.launch(Dispatchers.IO) {
-            if (!link.send(frame)) {
+            if (!sendViaActive(frame)) {
                 // no queue-on-disconnect: say so in the UI rather than pretend it went
                 markSent(frame.msgId) { it.failed = true }
                 Log.w(TAG, "send failed (not connected) — msg ${frame.msgId} marked failed")
@@ -202,14 +237,16 @@ class CommApp private constructor(private val context: Context) {
                 .put("langs", JSONArrayOf(langs))
                 .toString().toByteArray(Charsets.UTF_8),
         )
-        link.send(hello)
+        if (!sendViaActive(hello)) {
+            Log.w(TAG, "sendHello failed — no active transport")
+        }
     }
 
     private fun JSONArrayOf(l: List<String>) =
         org.json.JSONArray().apply { l.forEach { put(it) } }
 
     private fun ack(msgId: Long) {
-        link.send(Wire.Frame(Wire.TYPE_ACK, msgId = msgId))
+        sendViaActive(Wire.Frame(Wire.TYPE_ACK, msgId = msgId))
     }
 
     // ---- receive path ----
@@ -230,7 +267,7 @@ class CommApp private constructor(private val context: Context) {
             Wire.TYPE_PING -> {
                 val t1 = android.os.SystemClock.elapsedRealtime() * 1000
                 val payload = clock.pongPayloadFromPing(f.payload, t1)
-                if (payload != null) link.send(Wire.Frame(Wire.TYPE_PONG, msgId = f.msgId, payload = payload))
+                if (payload != null) sendViaActive(Wire.Frame(Wire.TYPE_PONG, msgId = f.msgId, payload = payload))
             }
             Wire.TYPE_PONG -> {
                 val (t0, t1) = clock.parsePong(f.payload) ?: return
@@ -238,7 +275,11 @@ class CommApp private constructor(private val context: Context) {
                 val sample = clock.add(t0, t1, t3)
                 lastRttMs.value = sample.rttUs / 1000
             }
-            Wire.TYPE_BYE -> onLinkState(LinkState.DISCONNECTED, "peer said bye")
+            Wire.TYPE_BYE -> {
+                activeTransport = null
+                state.value = LinkState.DISCONNECTED to "peer said bye"
+                Log.i(TAG, "link: DISCONNECTED peer said bye")
+            }
         }
     }
 
@@ -258,7 +299,7 @@ class CommApp private constructor(private val context: Context) {
             // no clock samples yet? seed one immediately so e2e stays meaningful
             if (clock.best() == null) {
                 val t0 = android.os.SystemClock.elapsedRealtime() * 1000
-                link.send(Wire.Frame(Wire.TYPE_PING, msgId = 900_000 + (t0 % 100000), payload = java.nio.ByteBuffer.allocate(8).putLong(t0).array()))
+                sendViaActive(Wire.Frame(Wire.TYPE_PING, msgId = 900_000 + (t0 % 100000), payload = java.nio.ByteBuffer.allocate(8).putLong(t0).array()))
             }
         }
         if (!peerLangs.value.contains(lang) && peerLangs.value.isNotEmpty()) {
@@ -399,6 +440,7 @@ class CommApp private constructor(private val context: Context) {
 
     fun release() {
         link.close()
+        bt.close()
         tts.values.forEach { it.close() }
         tts.clear()
     }

@@ -30,26 +30,21 @@ import androidx.compose.ui.unit.sp
 import isro.itantra.transport.LinkState
 
 /**
- * iTantra's visual system — a field instrument, not a chat app.
- *
- * The whole product thesis is "text crosses the wire, voice happens at both
- * ends", so the interface splits those two worlds typographically: machine
- * state (link, ids, latency, acknowledgements) is monospace, small and tracked
- * out; human speech is large sans, because that is the thing a person in the
- * field has to read at arm's length in bad light.
- *
- * Dark only, on purpose: this is used at night in the field, and a white screen
- * destroys night vision. Graphite rather than black so the panel has depth.
+ * iTantra's visual system — updated dark military-grade neural transceiver UI.
  */
 
-val Ground = Color(0xFF14161A) // graphite panel body
-val Panel = Color(0xFF1D2127) // raised surface
-val Ink = Color(0xFF2E3A4E) // structural ink-blue: dividers, sent messages
-val InkLift = Color(0xFF3D4E68) // ink, one step up
-val Signal = Color(0xFFF2A22C) // signal amber — live carrier, transmitting. Nothing else.
-val Slip = Color(0xFFE8E2D4) // telegram paper — the received message slip
-val Alarm = Color(0xFFD93A2B) // alerts only, never decorative
-val Mute = Color(0xFF8A93A3) // secondary readouts
+val Ground = Color(0xFF060709) // Deep black background
+val DarkCard = Color(0xFF12161E) // Card surface background
+val Panel = Color(0xFF1B212C) // Slightly raised surface / input bg
+val Ink = Color(0xFF2E3A4E) // Structural ink-blue
+val InkLift = Color(0xFF3D4E68) // Elevated ink
+val Signal = Color(0xFFF79E1B) // Warm Amber / Gold primary accent
+val PurpleAccent = Color(0xFFA67CFF) // Purple CTA accent for Splash screen
+val Slip = Color(0xFFE6ECEF) // Off-white / light text
+val Alarm = Color(0xFFD93A2B) // Emergency alerts
+val ActiveGreen = Color(0xFF4CD964) // Active status green
+val StandbyBlue = Color(0xFF34AADC) // Standby status blue
+val Mute = Color(0xFF7E8896) // Secondary muted text
 
 val Mono = FontFamily.Monospace
 val Sans = FontFamily.SansSerif
@@ -61,9 +56,9 @@ private val scheme = darkColorScheme(
     onSecondary = Slip,
     background = Ground,
     onBackground = Slip,
-    surface = Panel,
+    surface = DarkCard,
     onSurface = Slip,
-    surfaceVariant = Ink,
+    surfaceVariant = Panel,
     onSurfaceVariant = Mute,
     error = Alarm,
     onError = Slip,
@@ -76,23 +71,23 @@ private val scheme = darkColorScheme(
 private val typography = Typography(
     // wordmark
     displaySmall = TextStyle(
-        fontFamily = Mono, fontSize = 20.sp, fontWeight = FontWeight.Bold, letterSpacing = 5.sp,
+        fontFamily = Sans, fontSize = 24.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp,
     ),
-    // section eyebrows: RECEIVED / LANGUAGE / LINK
+    // section eyebrows
     labelSmall = TextStyle(
-        fontFamily = Mono, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.8.sp,
+        fontFamily = Mono, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.2.sp,
     ),
     // instrument readouts: ids, latency, ACK
     labelMedium = TextStyle(
-        fontFamily = Mono, fontSize = 12.sp, fontWeight = FontWeight.Medium, letterSpacing = 0.8.sp,
+        fontFamily = Mono, fontSize = 12.sp, fontWeight = FontWeight.Medium, letterSpacing = 0.5.sp,
     ),
     labelLarge = TextStyle(
-        fontFamily = Mono, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.2.sp,
+        fontFamily = Mono, fontSize = 14.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.8.sp,
     ),
-    // human speech — deliberately large, Indic scripts need the room
-    bodyLarge = TextStyle(fontFamily = Sans, fontSize = 19.sp, lineHeight = 27.sp),
-    bodyMedium = TextStyle(fontFamily = Sans, fontSize = 15.sp, lineHeight = 21.sp),
-    titleMedium = TextStyle(fontFamily = Sans, fontSize = 17.sp, fontWeight = FontWeight.SemiBold),
+    // human speech
+    bodyLarge = TextStyle(fontFamily = Sans, fontSize = 17.sp, lineHeight = 24.sp),
+    bodyMedium = TextStyle(fontFamily = Sans, fontSize = 14.sp, lineHeight = 20.sp),
+    titleMedium = TextStyle(fontFamily = Sans, fontSize = 16.sp, fontWeight = FontWeight.Bold),
 )
 
 @Composable
@@ -109,26 +104,21 @@ fun animationsEnabled(): Boolean {
 }
 
 /**
- * The carrier bar — this app's one instrument, and the only place motion lives.
- * It sits under the header on every screen and *is* the link: dim when there is
- * none, a travelling pulse while reaching for a peer, solid amber when the
- * carrier is up, and red while an alert is playing.
+ * The carrier bar — link state indicator.
  */
 @Composable
 fun CarrierBar(state: LinkState, live: Boolean, alert: Boolean, modifier: Modifier = Modifier) {
     val target = when {
         alert -> Alarm
-        state == LinkState.CONNECTED -> Signal
+        state == LinkState.CONNECTED -> ActiveGreen
         state == LinkState.ERROR -> Alarm
-        state == LinkState.HOSTING || state == LinkState.CONNECTING -> InkLift
+        state == LinkState.HOSTING || state == LinkState.CONNECTING -> Signal
         else -> Ink
     }
     val colour by animateColorAsState(target, label = "carrier")
     val searching = state == LinkState.HOSTING || state == LinkState.CONNECTING
     val sweeping = animationsEnabled() && (searching || live)
 
-    // the transition is always created (composition must be unconditional); only
-    // the drawing is gated, so a still bar costs nothing visually
     val phase by rememberInfiniteTransition(label = "carrier").animateFloat(
         initialValue = 0f,
         targetValue = 1f,
@@ -136,7 +126,7 @@ fun CarrierBar(state: LinkState, live: Boolean, alert: Boolean, modifier: Modifi
         label = "phase",
     )
 
-    Canvas(modifier.fillMaxWidth().height(3.dp)) {
+    Canvas(modifier.fillMaxWidth().height(2.dp)) {
         val solid = state == LinkState.CONNECTED || live
         drawRect(colour.copy(alpha = if (solid) 0.85f else 0.30f))
         if (sweeping) {
@@ -146,9 +136,9 @@ fun CarrierBar(state: LinkState, live: Boolean, alert: Boolean, modifier: Modifi
     }
 }
 
-/** Small tracked-out monospace label. Names a region; never decorates one. */
+/** Small tracked-out label. */
 @Composable
-fun Eyebrow(text: String, modifier: Modifier = Modifier, colour: Color = Mute) {
+fun Eyebrow(text: String, modifier: Modifier = Modifier, colour: Color = Signal) {
     Text(
         text.uppercase(),
         style = MaterialTheme.typography.labelSmall,
@@ -162,3 +152,4 @@ fun Eyebrow(text: String, modifier: Modifier = Modifier, colour: Color = Mute) {
 fun Readout(text: String, modifier: Modifier = Modifier, colour: Color = Mute) {
     Text(text, style = MaterialTheme.typography.labelMedium, color = colour, modifier = modifier)
 }
+
