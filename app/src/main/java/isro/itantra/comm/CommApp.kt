@@ -1,6 +1,12 @@
 package isro.itantra.comm
 
 import android.content.Context
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.Intent
+import android.os.Build
+import androidx.core.app.NotificationCompat
 import android.util.Log
 import isro.itantra.engine.SttEngine
 import isro.itantra.metrics.ClockSync
@@ -25,6 +31,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
+import isro.itantra.NotificationHelper
 
 /**
  * Application-level comm layer for Phase 2: owns the transport, the protocol
@@ -65,6 +72,7 @@ class CommApp private constructor(private val context: Context) {
 
     val state = MutableStateFlow(LinkState.DISCONNECTED to (null as String?))
     val peerLangs = MutableStateFlow<List<String>>(emptyList())
+    val pendingBtPeer = MutableStateFlow<String?>(null)
     val history = MutableStateFlow<List<Message>>(emptyList())
     val speaking = MutableStateFlow(false)
     val alertPlaying = MutableStateFlow(false)
@@ -74,10 +82,156 @@ class CommApp private constructor(private val context: Context) {
 
     init {
         bt.attach(context)
+        createNotificationChannels()
+    }
+
+    private fun createNotificationChannels() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+
+        val manager =
+            context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        val normalChannel = NotificationChannel(
+            "itantra_messages",
+            "iTantra Messages",
+            NotificationManager.IMPORTANCE_DEFAULT
+        ).apply {
+            description = "Normal iTantra messages"
+        }
+
+        val alertChannel = NotificationChannel(
+            "itantra_alerts",
+            "iTantra Alerts",
+            NotificationManager.IMPORTANCE_HIGH
+        ).apply {
+            description = "High priority iTantra alerts"
+            enableVibration(false)
+        }
+
+        val pairingChannel = NotificationChannel(
+            "itantra_pairing",
+            "iTantra Pairing",
+            NotificationManager.IMPORTANCE_HIGH
+        ).apply {
+            description = "iTantra pairing requests"
+        }
+
+        manager.createNotificationChannel(normalChannel)
+        manager.createNotificationChannel(alertChannel)
+        manager.createNotificationChannel(pairingChannel)
+    }
+
+    private fun showPairingNotification(peerName: String?) {
+        val manager =
+            context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        val intent = context.packageManager
+            .getLaunchIntentForPackage(context.packageName)
+
+        val pendingIntent = intent?.let {
+            PendingIntent.getActivity(
+                context,
+                300,
+                it,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+        }
+
+        val peer = peerName ?: "Another device"
+
+        val notification = NotificationCompat.Builder(
+            context,
+            "itantra_pairing"
+        )
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setContentTitle("iTantra Pairing Request")
+            .setContentText("$peer wants to pair with you")
+            .setStyle(
+                NotificationCompat.BigTextStyle()
+                    .bigText("$peer wants to pair with you")
+            )
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .addAction(
+                android.R.drawable.ic_menu_add,
+                "ACCEPT",
+                pendingIntent
+            )
+            .apply {
+                if (pendingIntent != null) {
+                    setContentIntent(pendingIntent)
+                }
+            }
+            .build()
+
+        manager.notify(3000, notification)
+    }
+    private fun showMessageNotification(
+        text: String,
+        alert: Boolean
+    ) {
+        val manager =
+            context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        val intent = context.packageManager
+            .getLaunchIntentForPackage(context.packageName)
+
+        val pendingIntent = intent?.let {
+            PendingIntent.getActivity(
+                context,
+                100,
+                it,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+        }
+
+        val title = if (alert) "ALERT" else "iTantra"
+
+        val notification = NotificationCompat.Builder(
+            context,
+            if (alert) "itantra_alerts" else "itantra_messages"
+        )
+            .setSmallIcon(android.R.drawable.ic_dialog_alert)
+            .setContentTitle(title)
+            .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+            .setPriority(
+                if (alert)
+                    NotificationCompat.PRIORITY_MAX
+                else
+                    NotificationCompat.PRIORITY_DEFAULT
+            )
+            .setAutoCancel(true)
+            .apply {
+                if (pendingIntent != null) {
+                    setContentIntent(pendingIntent)
+                }
+
+                if (!alert) {
+                    setVibrate(longArrayOf(0, 300, 200, 300))
+                }
+            }
+            .build()
+
+        manager.notify(
+            if (alert) 2000 else 1000,
+            notification
+        )
     }
 
     fun hostBt() = bt.host()
     fun joinBt(peer: String) = bt.join(peer)
+
+    fun acceptBtPairing() {
+        val peer = pendingBtPeer.value ?: return
+
+        pendingBtPeer.value = null
+
+        Log.i(TAG, "Bluetooth pairing accepted: $peer")
+
+        // Connection is already established by BtLink.
+        // Accepting here confirms it at the application/UI level.
+    }
 
     private val msgCounter = AtomicLong(1)
     private val ackWait = ConcurrentHashMap<Long, PendingAck>()
@@ -154,11 +308,18 @@ class CommApp private constructor(private val context: Context) {
         when (s) {
             LinkState.CONNECTED -> {
                 activeTransport = from
+
+                // Show pairing request for a newly connected peer
+                if (from == TransportType.BLUETOOTH) {
+                    pendingBtPeer.value = detail
+                    showPairingNotification(detail)
+                }
+
                 // the peer's msgId counter restarts at 1 on reconnect — stale ids would
                 // make every message after a reconnect look like a duplicate and be dropped
                 seenIds.clear()
                 sendHello()
-                lastJoin = null // stop rejoin attempts once connected
+                lastJoin = null
             }
             LinkState.DISCONNECTED, LinkState.ERROR -> {
                 if (activeTransport == from) activeTransport = null
@@ -292,6 +453,15 @@ class CommApp private constructor(private val context: Context) {
         if (f.ackReq) ack(f.msgId)
         val lang = Wire.langCode(f.langId)
         history.value = history.value + Message(f.msgId, f.text, lang, f.alert, fromMe = false)
+        NotificationHelper.showMessage(
+            context = context,
+            message = f.text,
+            isAlert = f.alert
+        )
+        showMessageNotification(
+            text = if (f.alert) "ALERT: ${f.text}" else f.text,
+            alert = f.alert
+        )
         if (f.hasTiming && f.tSpeechEndUs != null) {
             val recvUs = android.os.SystemClock.elapsedRealtime() * 1000
             val t = MetricsExporter.fromFrame(f, recvUs, 0)

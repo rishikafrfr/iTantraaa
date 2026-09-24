@@ -57,6 +57,7 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import isro.itantra.NotificationHelper
 
 class MainActivity : ComponentActivity() {
 
@@ -92,6 +93,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        NotificationHelper.createChannels(this)
         setContent { ItantraTheme { App() } }
         scope.launch { comm.speaking.collect { session?.setMuted(it) } }
         CommService.start(this)
@@ -1245,12 +1247,36 @@ class MainActivity : ComponentActivity() {
                         )
                     }
 
-                    // Alert / Beacon Mode Toggle
-                    IconButton(onClick = { alertMode = !alertMode }) {
-                        Text(
-                            if (alertMode) "🚨" else "📡",
-                            fontSize = 18.sp
-                        )
+                    // Alert Mode Toggle
+                    Surface(
+                        onClick = { alertMode = !alertMode },
+                        shape = RoundedCornerShape(10.dp),
+                        color = if (alertMode) Alarm.copy(alpha = 0.18f) else DarkCard,
+                        border = androidx.compose.foundation.BorderStroke(
+                            1.dp,
+                            if (alertMode) Alarm else Ink
+                        ),
+                        modifier = Modifier.height(44.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                if (alertMode) "🚨" else "📡",
+                                fontSize = 17.sp
+                            )
+
+                            Spacer(Modifier.width(6.dp))
+
+                            Text(
+                                if (alertMode) "SEND ALERT" else "NORMAL",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = FontWeight.Bold
+                                ),
+                                color = if (alertMode) Alarm else Mute
+                            )
+                        }
                     }
                 }
             }
