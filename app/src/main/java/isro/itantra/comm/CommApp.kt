@@ -458,10 +458,7 @@ class CommApp private constructor(private val context: Context) {
             message = f.text,
             isAlert = f.alert
         )
-        showMessageNotification(
-            text = if (f.alert) "ALERT: ${f.text}" else f.text,
-            alert = f.alert
-        )
+
         if (f.hasTiming && f.tSpeechEndUs != null) {
             val recvUs = android.os.SystemClock.elapsedRealtime() * 1000
             val t = MetricsExporter.fromFrame(f, recvUs, 0)

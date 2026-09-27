@@ -73,21 +73,51 @@ class MainActivity : ComponentActivity() {
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
     private var pendingBt: (() -> Unit)? = null
-    private val btPermission =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-            if (granted) pendingBt?.invoke() else status = getString(R.string.no_bt)
+
+    private val btPermissions =
+        registerForActivityResult(
+            ActivityResultContracts.RequestMultiplePermissions()
+        ) { result ->
+
+            val connectGranted =
+                result[Manifest.permission.BLUETOOTH_CONNECT] == true
+
+            val advertiseGranted =
+                result[Manifest.permission.BLUETOOTH_ADVERTISE] == true
+
+            val scanGranted =
+                result[Manifest.permission.BLUETOOTH_SCAN] == true
+
+            if (connectGranted && advertiseGranted && scanGranted) {
+                pendingBt?.invoke()
+            } else {
+                status = getString(R.string.no_bt)
+            }
+
             pendingBt = null
         }
 
     private fun withBt(action: () -> Unit) {
-        if (Build.VERSION.SDK_INT < 31 ||
-            ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) ==
-            PackageManager.PERMISSION_GRANTED
-        ) {
+        if (Build.VERSION.SDK_INT < 31) {
+            action()
+            return
+        }
+
+        val permissions = arrayOf(
+            Manifest.permission.BLUETOOTH_CONNECT,
+            Manifest.permission.BLUETOOTH_ADVERTISE
+        )
+
+        val allGranted = permissions.all {
+            ContextCompat.checkSelfPermission(this, it) ==
+                    PackageManager.PERMISSION_GRANTED
+        }
+
+        if (allGranted) {
             action()
         } else {
             pendingBt = action
-            btPermission.launch(Manifest.permission.BLUETOOTH_CONNECT)
+            btPermissions.launch(permissions)
         }
     }
 
