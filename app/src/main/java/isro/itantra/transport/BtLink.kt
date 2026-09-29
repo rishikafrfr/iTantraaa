@@ -182,7 +182,11 @@ class BtLink(
 
     @SuppressLint("MissingPermission")
     private fun onConnected(s: BluetoothSocket) {
-        runCatching { socket?.close() }
+        // Do NOT close the socket we have just connected with.
+        // join() already stores this same socket in socket.
+        if (socket != null && socket !== s) {
+            runCatching { socket?.close() }
+        }
 
         socket = s
         out = DataOutputStream(s.outputStream)
@@ -209,7 +213,7 @@ class BtLink(
             try {
                 val ins = DataInputStream(s.inputStream)
 
-                while (running.get()) {
+                while (running.get() && socket === s) {
                     val n = ins.read(buf)
 
                     if (n < 0) break
@@ -224,11 +228,20 @@ class BtLink(
                         }
                 }
 
-            } catch (_: IOException) {
-                // handled below
+            } catch (e: IOException) {
+                if (running.get() && socket === s) {
+                    onState(
+                        LinkState.DISCONNECTED,
+                        "connection lost: ${e.message ?: "Bluetooth socket closed"}"
+                    )
+                }
             } finally {
-                if (running.get()) {
+                // Only clean up if this is still the active socket.
+                if (socket === s) {
                     running.set(false)
+                    socket = null
+                    out = null
+
                     onState(
                         LinkState.DISCONNECTED,
                         "connection lost"
@@ -240,18 +253,26 @@ class BtLink(
         heartbeatJob = scope.launch {
             var pingId = 1L
 
-            while (running.get()) {
+            while (running.get() && socket === s) {
                 delay(2000)
 
-                if (!running.get()) break
+                if (!running.get() || socket !== s) break
 
-                runCatching {
-                    send(
-                        Wire.Frame(
-                            type = Wire.TYPE_PING,
-                            msgId = pingId++
-                        )
+                val ok = send(
+                    Wire.Frame(
+                        type = Wire.TYPE_PING,
+                        msgId = pingId++
                     )
+                )
+
+                if (!ok && running.get() && socket === s) {
+                    running.set(false)
+                    runCatching { s.close() }
+                    onState(
+                        LinkState.DISCONNECTED,
+                        "Bluetooth send failed"
+                    )
+                    break
                 }
             }
         }
