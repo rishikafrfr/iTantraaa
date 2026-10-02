@@ -9,6 +9,7 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import android.util.Log
 import isro.itantra.engine.SttEngine
+import isro.itantra.data.ItantraDatabaseHelper
 import isro.itantra.metrics.ClockSync
 import isro.itantra.metrics.MsgTiming
 import isro.itantra.metrics.MetricsExporter
@@ -55,6 +56,9 @@ class CommApp private constructor(private val context: Context) {
     )
 
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    private val database = ItantraDatabaseHelper(context)
+
     private enum class TransportType {
         TCP,
         BLUETOOTH
@@ -318,6 +322,27 @@ class CommApp private constructor(private val context: Context) {
                 // the peer's msgId counter restarts at 1 on reconnect — stale ids would
                 // make every message after a reconnect look like a duplicate and be dropped
                 seenIds.clear()
+
+                // Save Bluetooth device and record this connection.
+                if (from == TransportType.BLUETOOTH) {
+                    val deviceAddress = bt.connectedDeviceAddress
+                    val deviceName = bt.connectedDeviceName ?: detail ?: "Unknown Device"
+
+                    if (deviceAddress != null) {
+                        database.saveDevice(
+                            name = deviceName,
+                            address = deviceAddress,
+                            protocol = "BLUETOOTH"
+                        )
+
+                        database.addConnectionHistory(
+                            deviceName = deviceName,
+                            deviceAddress = deviceAddress,
+                            protocol = "BLUETOOTH"
+                        )
+                    }
+                }
+
                 sendHello()
                 lastJoin = null
             }

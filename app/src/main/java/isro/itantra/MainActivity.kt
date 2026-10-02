@@ -14,6 +14,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -39,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import isro.itantra.comm.CommApp
+import isro.itantra.data.ItantraDatabaseHelper
 import isro.itantra.engine.SttEngine
 import isro.itantra.nlp.TextNormaliser
 import isro.itantra.nlp.UrduToDevanagari
@@ -54,6 +56,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -63,6 +66,10 @@ class MainActivity : ComponentActivity() {
 
     private val scope = CoroutineScope(Dispatchers.Main)
     private var session: TalkSession? = null
+
+    private val database by lazy {
+        ItantraDatabaseHelper(applicationContext)
+    }
 
     private val micPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -344,12 +351,22 @@ class MainActivity : ComponentActivity() {
     // ==========================================
     @Composable
     private fun ConnectDeviceScreen() {
-        var activeTab by rememberSaveable { mutableIntStateOf(0) } // 0: Wifi, 1: Bluetooth
+        var activeTab by rememberSaveable { mutableIntStateOf(0) }
         val state by comm.state.collectAsState()
         val peers by comm.peerLangs.collectAsState()
         val rtt by comm.lastRttMs.collectAsState()
         var wifiAddr by rememberSaveable { mutableStateOf("10.0.2.2") }
         var btPeer by rememberSaveable { mutableStateOf("") }
+
+        var savedDevices by remember {
+            mutableStateOf<List<Map<String, Any?>>>(emptyList())
+        }
+
+        LaunchedEffect(state.first) {
+            savedDevices = withContext(Dispatchers.IO) {
+                database.getSavedDevices()
+            }
+        }
 
         Column(
             Modifier
@@ -667,16 +684,45 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    val btPresets = listOf(
-                        DeviceItem("Priya's Phone", "BLUETOOTH", "Priya's Phone", "-48 DBM", StandbyBlue),
-                        DeviceItem("Field_Unit_Alpha", "BLUETOOTH", "Field_Unit_Alpha", "-55 DBM", ActiveGreen)
-                    )
+                    items(savedDevices) { savedDevice ->
 
-                    items(btPresets) { dev ->
-                        DeviceCard(device = dev, onConnect = {
-                            btPeer = dev.address
-                            withBt { comm.joinBt(dev.address) }
-                        })
+                        val deviceName =
+                            savedDevice["name"] as? String ?: "Unknown Device"
+
+                        val deviceAddress =
+                            savedDevice["address"] as? String ?: ""
+
+                        val deviceProtocol =
+                            savedDevice["protocol"] as? String ?: "BLUETOOTH"
+
+
+                        DeviceCard(
+                            device = DeviceItem(
+                                name = deviceName,
+                                proto = deviceProtocol,
+                                address = deviceAddress,
+                                rssi = "SAVED",
+                                dotColor = if (state.first == LinkState.CONNECTED) {
+                                    ActiveGreen
+                                } else {
+                                    StandbyBlue
+                                }
+                            ),
+                            onConnect = {
+                                btPeer = deviceAddress
+                                withBt {
+                                    comm.joinBt(deviceAddress)
+                                }
+                            },
+                            onForget = {
+                                scope.launch {
+                                    savedDevices = withContext(Dispatchers.IO) {
+                                        database.forgetDevice(deviceAddress)
+                                        database.getSavedDevices()
+                                    }
+                                }
+                            }
+                        )
                     }
                 }
             }
@@ -702,7 +748,11 @@ class MainActivity : ComponentActivity() {
     )
 
     @Composable
-    private fun DeviceCard(device: DeviceItem, onConnect: () -> Unit) {
+    private fun DeviceCard(
+        device: DeviceItem,
+        onConnect: () -> Unit,
+        onForget: (() -> Unit)? = null
+    ) {
         Card(
             shape = RoundedCornerShape(8.dp),
             colors = CardDefaults.cardColors(containerColor = Panel),
@@ -742,19 +792,47 @@ class MainActivity : ComponentActivity() {
                     )
                 }
 
-                Button(
-                    onClick = onConnect,
-                    shape = RoundedCornerShape(6.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Ink,
-                        contentColor = Color.White
-                    ),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text(
-                        "Connect",
-                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
-                    )
+                    Button(
+                        onClick = onConnect,
+                        shape = RoundedCornerShape(6.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Ink,
+                            contentColor = Color.White
+                        ),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        Text(
+                            "Connect",
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontWeight = FontWeight.Bold
+                            )
+                        )
+                    }
+
+                    onForget?.let {
+                        OutlinedButton(
+                            onClick = it,
+                            shape = RoundedCornerShape(6.dp),
+                            border = BorderStroke(1.dp, Alarm),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = Alarm
+                            ),
+                            contentPadding = PaddingValues(
+                                horizontal = 12.dp,
+                                vertical = 8.dp
+                            )
+                        ) {
+                            Text(
+                                "Forget",
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontWeight = FontWeight.Bold
+                                )
+                            )
+                        }
+                    }
                 }
             }
         }
