@@ -60,6 +60,7 @@ import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import isro.itantra.NotificationHelper
 
 class MainActivity : ComponentActivity() {
 
@@ -79,26 +80,57 @@ class MainActivity : ComponentActivity() {
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
     private var pendingBt: (() -> Unit)? = null
-    private val btPermission =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-            if (granted) pendingBt?.invoke() else status = getString(R.string.no_bt)
+
+    private val btPermissions =
+        registerForActivityResult(
+            ActivityResultContracts.RequestMultiplePermissions()
+        ) { result ->
+
+            val connectGranted =
+                result[Manifest.permission.BLUETOOTH_CONNECT] == true
+
+            val advertiseGranted =
+                result[Manifest.permission.BLUETOOTH_ADVERTISE] == true
+
+            val scanGranted =
+                result[Manifest.permission.BLUETOOTH_SCAN] == true
+
+            if (connectGranted && advertiseGranted && scanGranted) {
+                pendingBt?.invoke()
+            } else {
+                status = getString(R.string.no_bt)
+            }
+
             pendingBt = null
         }
 
     private fun withBt(action: () -> Unit) {
-        if (Build.VERSION.SDK_INT < 31 ||
-            ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) ==
-            PackageManager.PERMISSION_GRANTED
-        ) {
+        if (Build.VERSION.SDK_INT < 31) {
+            action()
+            return
+        }
+
+        val permissions = arrayOf(
+            Manifest.permission.BLUETOOTH_CONNECT,
+            Manifest.permission.BLUETOOTH_ADVERTISE
+        )
+
+        val allGranted = permissions.all {
+            ContextCompat.checkSelfPermission(this, it) ==
+                    PackageManager.PERMISSION_GRANTED
+        }
+
+        if (allGranted) {
             action()
         } else {
             pendingBt = action
-            btPermission.launch(Manifest.permission.BLUETOOTH_CONNECT)
+            btPermissions.launch(permissions)
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        NotificationHelper.createChannels(this)
         setContent { ItantraTheme { App() } }
         scope.launch { comm.speaking.collect { session?.setMuted(it) } }
         CommService.start(this)
@@ -1323,12 +1355,36 @@ class MainActivity : ComponentActivity() {
                         )
                     }
 
-                    // Alert / Beacon Mode Toggle
-                    IconButton(onClick = { alertMode = !alertMode }) {
-                        Text(
-                            if (alertMode) "🚨" else "📡",
-                            fontSize = 18.sp
-                        )
+                    // Alert Mode Toggle
+                    Surface(
+                        onClick = { alertMode = !alertMode },
+                        shape = RoundedCornerShape(10.dp),
+                        color = if (alertMode) Alarm.copy(alpha = 0.18f) else DarkCard,
+                        border = androidx.compose.foundation.BorderStroke(
+                            1.dp,
+                            if (alertMode) Alarm else Ink
+                        ),
+                        modifier = Modifier.height(44.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                if (alertMode) "🚨" else "📡",
+                                fontSize = 17.sp
+                            )
+
+                            Spacer(Modifier.width(6.dp))
+
+                            Text(
+                                if (alertMode) "SEND ALERT" else "NORMAL",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = FontWeight.Bold
+                                ),
+                                color = if (alertMode) Alarm else Mute
+                            )
+                        }
                     }
                 }
             }

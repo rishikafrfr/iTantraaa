@@ -20,11 +20,6 @@ import java.io.IOException
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 
-/**
- * Bluetooth Classic RFCOMM (SPP) transport — the path for phone-to-phone
- * without Wi-Fi and for ESP32/HC-05 style embedded receivers. Mirrors TcpLink's
- * callback shape so CommApp can switch transports transparently.
- */
 class BtLink(
     private val onFrame: (Wire.Frame) -> Unit,
     private val onState: (LinkState, String?) -> Unit,
@@ -37,116 +32,261 @@ class BtLink(
     private var out: DataOutputStream? = null
     private var readerJob: Job? = null
     private var heartbeatJob: Job? = null
-    private var sendLock = Any()
 
-    private fun adapter(): BluetoothAdapter? =
-        (context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager)?.adapter
+    private val sendLock = Any()
 
     private lateinit var context: Context
+
+    private fun adapter(): BluetoothAdapter? {
+        if (!::context.isInitialized) return null
+
+        return (
+                context.getSystemService(Context.BLUETOOTH_SERVICE)
+                        as? BluetoothManager
+                )?.adapter
+    }
 
     fun attach(context: Context) {
         this.context = context.applicationContext
     }
 
-    /** Accept one incoming SPP connection (blocks in background). */
-    @SuppressLint("MissingPermission") // every call below is inside a SecurityException handler
+    /**
+     * Start listening for one incoming Bluetooth RFCOMM connection.
+     */
     fun host() {
-        if (!::context.isInitialized) throw IllegalStateException("call attach() first")
-        val a = adapter() ?: run { onState(LinkState.ERROR, "no bluetooth adapter"); return }
-        if (!a.isEnabled) { onState(LinkState.ERROR, "Bluetooth is off"); return }
-        reset()
-        // adapter.name needs BLUETOOTH_CONNECT on API 31+; this call sits outside the
-        // launch block, so an ungranted permission threw SecurityException straight
-        // onto the UI thread and killed the app
-        onState(LinkState.HOSTING, runCatching { a.name }.getOrNull())
+        if (!::context.isInitialized) {
+            onState(LinkState.ERROR, "Bluetooth not initialized")
+            return
+        }
+
         scope.launch {
             try {
-                @SuppressLint("MissingPermission")
-                val ss = a.listenUsingRfcommWithServiceRecord(SERVICE_NAME, SPP_UUID)
+                val a = adapter()
+
+                if (a == null) {
+                    onState(LinkState.ERROR, "no bluetooth adapter")
+                    return@launch
+                }
+
+                if (!a.isEnabled) {
+                    onState(LinkState.ERROR, "Bluetooth is off")
+                    return@launch
+                }
+
+                reset()
+
+                val deviceName =
+                    runCatching { a.name }.getOrNull() ?: "Bluetooth"
+
+                onState(LinkState.HOSTING, deviceName)
+
+                val ss = a.listenUsingRfcommWithServiceRecord(
+                    SERVICE_NAME,
+                    SPP_UUID
+                )
+
                 server = ss
-                val s = ss.accept()
-                server?.close()
-                onConnected(s)
+
+                val acceptedSocket = ss.accept()
+
+                runCatching { ss.close() }
+                server = null
+
+                onConnected(acceptedSocket)
+
             } catch (e: SecurityException) {
-                onState(LinkState.ERROR, "bluetooth permission denied")
+                onState(
+                    LinkState.ERROR,
+                    "Bluetooth permission denied"
+                )
             } catch (e: IOException) {
-                if (running.get()) onState(LinkState.ERROR, "bt host: ${e.message}")
+                if (running.get()) {
+                    onState(
+                        LinkState.ERROR,
+                        "Bluetooth host failed: ${e.message}"
+                    )
+                }
             }
         }
     }
 
-    /** Connect to an already-paired device by name fragment or MAC. */
-    @SuppressLint("MissingPermission") // every call below is inside a SecurityException handler
+    /**
+     * Connect to an already-paired Bluetooth device.
+     *
+     * The argument can be either the device MAC address
+     * or part/all of its Bluetooth name.
+     */
     fun join(peer: String) {
-        if (!::context.isInitialized) throw IllegalStateException("call attach() first")
-        val a = adapter() ?: run { onState(LinkState.ERROR, "no bluetooth adapter"); return }
-        if (!a.isEnabled) { onState(LinkState.ERROR, "Bluetooth is off"); return }
-        reset()
-        onState(LinkState.CONNECTING, peer)
+        if (!::context.isInitialized) {
+            onState(LinkState.ERROR, "Bluetooth not initialized")
+            return
+        }
+
         scope.launch {
             try {
-                @SuppressLint("MissingPermission")
-                val device = a.bondedDevices.firstOrNull {
-                    it.address.equals(peer, true) || it.name?.contains(peer, true) == true
-                } ?: run {
-                    onState(LinkState.ERROR, "no paired device matching '$peer'")
+                val a = adapter()
+
+                if (a == null) {
+                    onState(LinkState.ERROR, "No Bluetooth adapter")
                     return@launch
                 }
-                val s = device.createRfcommSocketToServiceRecord(SPP_UUID)
-                // no cancelDiscovery(): we only ever connect to already-bonded
-                // devices, and that call needs BLUETOOTH_SCAN (API 31+) which this
-                // app does not hold — it threw SecurityException and failed the join
-                s.connect()
-                onConnected(s)
+
+                if (!a.isEnabled) {
+                    onState(LinkState.ERROR, "Bluetooth is off")
+                    return@launch
+                }
+
+                reset()
+                onState(LinkState.CONNECTING, peer)
+
+                @SuppressLint("MissingPermission")
+                val device = a.bondedDevices.firstOrNull {
+                    it.address.equals(peer.trim(), ignoreCase = true) ||
+                            (it.name?.trim()?.equals(peer.trim(), ignoreCase = true) == true)
+                }
+
+                if (device == null) {
+                    onState(
+                        LinkState.ERROR,
+                        "No paired Bluetooth device matching '$peer'"
+                    )
+                    return@launch
+                }
+
+                @SuppressLint("MissingPermission")
+                val newSocket = device.createRfcommSocketToServiceRecord(SPP_UUID)
+
+                socket = newSocket
+
+                newSocket.connect()
+
+                onConnected(newSocket)
+
             } catch (e: SecurityException) {
-                onState(LinkState.ERROR, "bluetooth permission denied")
+                onState(
+                    LinkState.ERROR,
+                    "Bluetooth permission denied"
+                )
             } catch (e: IOException) {
-                onState(LinkState.ERROR, "bt join $peer: ${e.message}")
+                runCatching { socket?.close() }
+                socket = null
+                out = null
+
+                onState(
+                    LinkState.ERROR,
+                    "Bluetooth connection failed: ${e.message}"
+                )
             }
         }
     }
 
     @SuppressLint("MissingPermission")
     private fun onConnected(s: BluetoothSocket) {
+        // Do NOT close the socket we have just connected with.
+        // join() already stores this same socket in socket.
+        if (socket != null && socket !== s) {
+            runCatching { socket?.close() }
+        }
+
         socket = s
         out = DataOutputStream(s.outputStream)
+
         running.set(true)
+
+        val remoteName =
+            runCatching { s.remoteDevice.name }.getOrNull()
+                ?: runCatching { s.remoteDevice.address }.getOrNull()
+                ?: "Bluetooth device"
+
         onState(
             LinkState.CONNECTED,
-            runCatching { s.remoteDevice.name }.getOrNull() ?: s.remoteDevice.address,
+            remoteName
         )
+
+        readerJob?.cancel()
+        heartbeatJob?.cancel()
+
         readerJob = scope.launch {
             val parser = Wire.StreamParser()
             val buf = ByteArray(8192)
+
             try {
                 val ins = DataInputStream(s.inputStream)
-                while (running.get()) {
+
+                while (running.get() && socket === s) {
                     val n = ins.read(buf)
+
                     if (n < 0) break
+                    if (n == 0) continue
+
                     parser.feed(buf, n)
-                    parser.drain().forEach(onFrame)
+
+                    parser
+                        .drain()
+                        .forEach { frame ->
+                            onFrame(frame)
+                        }
                 }
-                onState(LinkState.DISCONNECTED, "peer closed")
-            } catch (_: IOException) {
-                if (running.get()) onState(LinkState.DISCONNECTED, "connection lost")
+
+            } catch (e: IOException) {
+                if (running.get() && socket === s) {
+                    onState(
+                        LinkState.DISCONNECTED,
+                        "connection lost: ${e.message ?: "Bluetooth socket closed"}"
+                    )
+                }
+            } finally {
+                // Only clean up if this is still the active socket.
+                if (socket === s) {
+                    running.set(false)
+                    socket = null
+                    out = null
+
+                    onState(
+                        LinkState.DISCONNECTED,
+                        "connection lost"
+                    )
+                }
             }
         }
+
         heartbeatJob = scope.launch {
             var pingId = 1L
-            while (running.get()) {
+
+            while (running.get() && socket === s) {
                 delay(2000)
-                runCatching { send(Wire.Frame(Wire.TYPE_PING, msgId = pingId++)) }
+
+                if (!running.get() || socket !== s) break
+
+                val ok = send(
+                    Wire.Frame(
+                        type = Wire.TYPE_PING,
+                        msgId = pingId++
+                    )
+                )
+
+                if (!ok && running.get() && socket === s) {
+                    running.set(false)
+                    runCatching { s.close() }
+                    onState(
+                        LinkState.DISCONNECTED,
+                        "Bluetooth send failed"
+                    )
+                    break
+                }
             }
         }
     }
 
     fun send(frame: Wire.Frame): Boolean {
         val o = out ?: return false
+
         return try {
             synchronized(sendLock) {
                 o.write(Wire.encode(frame))
                 o.flush()
             }
+
             true
         } catch (_: IOException) {
             false
@@ -155,10 +295,21 @@ class BtLink(
 
     private fun reset() {
         running.set(false)
+
         readerJob?.cancel()
         heartbeatJob?.cancel()
-        runCatching { server?.close() }
-        runCatching { socket?.close() }
+
+        readerJob = null
+        heartbeatJob = null
+
+        runCatching {
+            server?.close()
+        }
+
+        runCatching {
+            socket?.close()
+        }
+
         server = null
         socket = null
         out = null
@@ -166,12 +317,19 @@ class BtLink(
 
     fun close() {
         reset()
-        onState(LinkState.DISCONNECTED, "closed")
-        // scope stays alive so a later host()/join() still works (see TcpLink.close)
+
+        onState(
+            LinkState.DISCONNECTED,
+            "closed"
+        )
     }
 
     companion object {
         private const val SERVICE_NAME = "itantra"
-        val SPP_UUID: UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
+
+        val SPP_UUID: UUID =
+            UUID.fromString(
+                "00001101-0000-1000-8000-00805F9B34FB"
+            )
     }
 }
